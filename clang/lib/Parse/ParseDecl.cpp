@@ -5926,6 +5926,10 @@ static SourceLocation getMissingDeclaratorIdLoc(Declarator &D,
 ///         '...'[opt] id-expression
 ///         '::'[opt] nested-name-specifier[opt] type-name
 ///
+///       declarator-id: [-fnamedparams]
+///         '.' id-expression
+///         ':' id-expression
+///
 ///       id-expression: [C++ 5.1]
 ///         unqualified-id
 ///         qualified-id
@@ -6016,20 +6020,22 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // the l_paren token.
     }
 
-    // This parses the label-allowed or label-required indicator (-fnamedparams)
-    if (Tok.isOneOf(tok::period, tok::colon)) {
-      if (Tok.is(tok::period)) {
-        D.setFunctionParameterLabelKind(FunctionParameterLabelKind::LabelAllowed);
-      } else /*tok::colon*/{
-        D.setFunctionParameterLabelKind(FunctionParameterLabelKind::LabelRequired);
-      }
-      ConsumeToken();
-    }
+    // Do we lookahead a label declarator?
+    bool HasLabelledParameter = (D.isFunctionParameter() && Tok.isOneOf(tok::period, tok::colon));
 
     if (Tok.isOneOf(tok::identifier, tok::kw_operator, tok::annot_template_id,
-                    tok::tilde)) {
+                    tok::tilde) || HasLabelledParameter) {
       // We found something that indicates the start of an unqualified-id.
       // Parse that unqualified-id.
+
+      if (HasLabelledParameter) {
+        D.setFunctionParameterLabelKind(
+          Tok.is(tok::period) ?
+          FunctionParameterLabelKind::LabelAllowed :
+          FunctionParameterLabelKind::LabelRequired);
+        ConsumeToken();
+      }
+
       bool AllowConstructorName;
       bool AllowDeductionGuide;
       if (D.getDeclSpec().hasTypeSpecifier()) {
@@ -6871,6 +6877,12 @@ void Parser::ParseParameterDeclarationClause(
                 : DeclaratorCtx == DeclaratorContext::LambdaExpr
                       ? DeclaratorContext::LambdaExprParameter
                       : DeclaratorContext::Prototype);
+
+    // We set this Declarator initially to a positional parameter, ParseDeclarator will
+    // overwrite to either LabelAllowed or LabelRequired if it finds a label declarator.
+    if (getLangOpts().NamedParams)
+      ParmDeclarator.setFunctionParameterLabelKind(FunctionParameterLabelKind::Positional);
+
     ParseDeclarator(ParmDeclarator);
 
     // Parse GNU attributes, if present.
