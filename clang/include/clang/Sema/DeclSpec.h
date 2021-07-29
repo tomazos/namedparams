@@ -1758,6 +1758,15 @@ enum class FunctionDefinitionKind {
   Deleted
 };
 
+// Describes the kind of label that a function parameter
+// declarator has.
+enum class FunctionParameterLabelKind {
+  NotParameter,
+  Positional,
+  LabelAllowed,
+  LabelRequired,
+};
+
 enum class DeclaratorContext {
   File,                // File scope declaration.
   Prototype,           // Within a function prototype.
@@ -1832,6 +1841,12 @@ private:
   /// Actually a FunctionDefinitionKind.
   unsigned FunctionDefinition : 2;
 
+  // FunctionParameterLabelKind - Is this Declarator for a function
+  // parameter, and if so, what kind of label does it have?
+  //
+  // Actually a FunctionParameterLabelKind
+  unsigned FunctionParameterLabel : 2;
+
   /// Is this Declarator a redeclaration?
   unsigned Redeclaration : 1;
 
@@ -1896,6 +1911,7 @@ public:
         InvalidType(DS.getTypeSpecType() == DeclSpec::TST_error),
         GroupingParens(false), FunctionDefinition(static_cast<unsigned>(
                                    FunctionDefinitionKind::Declaration)),
+        FunctionParameterLabel(static_cast<unsigned>(FunctionParameterLabelKind::NotParameter)),
         Redeclaration(false), Extension(false), ObjCIvar(false),
         ObjCWeakProperty(false), InlineStorageUsed(false),
         HasInitializer(false), Attrs(ds.getAttributePool().getFactory()),
@@ -2579,6 +2595,18 @@ public:
 
   FunctionDefinitionKind getFunctionDefinitionKind() const {
     return (FunctionDefinitionKind)FunctionDefinition;
+  }
+
+  void setFunctionParameterLabelKind(FunctionParameterLabelKind Val) {
+    FunctionParameterLabel = static_cast<unsigned>(Val);
+  }
+
+  bool isFunctionParameter() const {
+    return getFunctionParameterLabelKind() != FunctionParameterLabelKind::NotParameter;
+  }
+
+  FunctionParameterLabelKind getFunctionParameterLabelKind() const {
+    return (FunctionParameterLabelKind)FunctionParameterLabel;
   }
 
   void setHasInitializer(bool Val = true) { HasInitializer = Val; }
