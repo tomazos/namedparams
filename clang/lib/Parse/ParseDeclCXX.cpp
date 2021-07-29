@@ -3710,6 +3710,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
 
     // Parse the optional expression-list.
     ExprVector ArgExprs;
+    ArgLabelVector ArgLabels;
     CommaLocsTy CommaLocs;
     auto RunSignatureHelp = [&] {
       if (TemplateTypeTy.isInvalid())
@@ -3721,7 +3722,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
       return PreferredType;
     };
     if (Tok.isNot(tok::r_paren) &&
-        ParseExpressionList(ArgExprs, CommaLocs, [&] {
+        ParseExpressionList(ArgExprs, getLangOpts().NamedParams ? &ArgLabels : nullptr, CommaLocs, [&] {
           PreferredType.enterFunctionArgument(Tok.getLocation(),
                                               RunSignatureHelp);
         })) {

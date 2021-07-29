@@ -2389,6 +2389,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
     T.consumeOpen();
 
     ExprVector Exprs;
+    ArgLabelVector ArgLabels;
     CommaLocsTy CommaLocs;
 
     InitializerScopeRAII InitScope(*this, D, ThisDecl);
@@ -2413,7 +2414,7 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
       // ProduceConstructorSignatureHelp only on VarDecls.
       ExpressionStarts = SetPreferredType;
     }
-    if (ParseExpressionList(Exprs, CommaLocs, ExpressionStarts)) {
+    if (ParseExpressionList(Exprs, getLangOpts().NamedParams ? &ArgLabels : nullptr, CommaLocs, ExpressionStarts)) {
       if (ThisVarDecl && PP.isCodeCompletionReached() && !CalledSignatureHelp) {
         Actions.ProduceConstructorSignatureHelp(
             getCurScope(), ThisVarDecl->getType()->getCanonicalTypeInternal(),

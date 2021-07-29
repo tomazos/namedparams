@@ -474,7 +474,7 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
       CalledSignatureHelp = true;
       return PreferredType;
     };
-    if (ParseExpressionList(Exprs, CommaLocs, [&] {
+    if (ParseExpressionList(Exprs, /*ArgLabels=*/nullptr, CommaLocs, [&] {
           PreferredType.enterFunctionArgument(Tok.getLocation(),
                                               RunSignatureHelp);
         })) {

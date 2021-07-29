@@ -20,6 +20,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Sema/ArgumentLabel.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1812,6 +1813,7 @@ private:
 
   /// ParseExpressionList - Used for C/C++ (argument-)expression-list.
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
+                           SmallVectorImpl<ArgumentLabel>* ArgLabels,
                            SmallVectorImpl<SourceLocation> &CommaLocs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>());
@@ -2046,6 +2048,8 @@ private:
   typedef SmallVector<Stmt*, 32> StmtVector;
   /// A SmallVector of expressions, with stack size 12 (the maximum used.)
   typedef SmallVector<Expr*, 12> ExprVector;
+  /// A SmallVector of argument labels, with stack size 12.
+  typedef SmallVector<ArgumentLabel, 12> ArgLabelVector;
   /// A SmallVector of types.
   typedef SmallVector<ParsedType, 12> TypeVector;
 

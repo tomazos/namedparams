@@ -983,7 +983,7 @@ bool Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
         if (Tentative) {
           Parens.skipToEnd();
           *Tentative = LambdaIntroducerTentativeParse::Incomplete;
-        } else if (ParseExpressionList(Exprs, Commas)) {
+        } else if (ParseExpressionList(Exprs, /*ArgLabels=*/ nullptr, Commas)) {
           Parens.skipToEnd();
           Init = ExprError();
         } else {
@@ -1871,6 +1871,7 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
     PreferredType.enterTypeCast(Tok.getLocation(), TypeRep.get());
 
     ExprVector Exprs;
+    ArgLabelVector ArgLabels;
     CommaLocsTy CommaLocs;
 
     auto RunSignatureHelp = [&]() {
@@ -1884,7 +1885,7 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
     };
 
     if (Tok.isNot(tok::r_paren)) {
-      if (ParseExpressionList(Exprs, CommaLocs, [&] {
+      if (ParseExpressionList(Exprs, getLangOpts().NamedParams ? &ArgLabels : nullptr, CommaLocs, [&] {
             PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                 RunSignatureHelp);
           })) {
@@ -3121,6 +3122,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
   if (Tok.is(tok::l_paren)) {
     SourceLocation ConstructorLParen, ConstructorRParen;
     ExprVector ConstructorArgs;
+    ArgLabelVector ConstructorArgLabels;
     BalancedDelimiterTracker T(*this, tok::l_paren);
     T.consumeOpen();
     ConstructorLParen = T.getOpenLocation();
@@ -3140,7 +3142,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
         CalledSignatureHelp = true;
         return PreferredType;
       };
-      if (ParseExpressionList(ConstructorArgs, CommaLocs, [&] {
+      if (ParseExpressionList(ConstructorArgs, getLangOpts().NamedParams ? &ConstructorArgLabels : nullptr, CommaLocs, [&] {
             PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                 RunSignatureHelp);
           })) {
@@ -3241,7 +3243,7 @@ bool Parser::ParseExpressionListOrTypeId(
   // It's not a type, it has to be an expression list.
   // Discard the comma locations - ActOnCXXNew has enough parameters.
   CommaLocsTy CommaLocs;
-  return ParseExpressionList(PlacementArgs, CommaLocs);
+  return ParseExpressionList(PlacementArgs, /*ArgLabels=*/nullptr, CommaLocs);
 }
 
 /// ParseCXXDeleteExpression - Parse a C++ delete-expression. Delete is used

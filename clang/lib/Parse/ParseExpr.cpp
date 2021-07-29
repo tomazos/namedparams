@@ -2014,6 +2014,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       }
 
       ExprVector ArgExprs;
+      ArgLabelVector ArgLabels;
       CommaLocsTy CommaLocs;
       auto RunSignatureHelp = [&]() -> QualType {
         QualType PreferredType = Actions.ProduceCallSignatureHelp(
@@ -2023,7 +2024,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       };
       if (OpKind == tok::l_paren || !LHS.isInvalid()) {
         if (Tok.isNot(tok::r_paren)) {
-          if (ParseExpressionList(ArgExprs, CommaLocs, [&] {
+          if (ParseExpressionList(ArgExprs, getLangOpts().NamedParams ? &ArgLabels : nullptr, CommaLocs, [&] {
                 PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                     RunSignatureHelp);
               })) {
@@ -3353,10 +3354,29 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
 /// [C++0x]   braced-init-list
 /// \endverbatim
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
+                                 SmallVectorImpl<ArgumentLabel> *ArgLabels,
                                  SmallVectorImpl<SourceLocation> &CommaLocs,
-                                 llvm::function_ref<void()> ExpressionStarts) {
+                                 llvm::function_ref<void()> ExpressionStarts
+                                 ) {
   bool SawError = false;
   while (1) {
+    ArgumentLabel ArgLabel;
+
+    if (ArgLabels) {
+      if (Tok.is(tok::period) && GetLookAheadToken(1).is(tok::identifier) && GetLookAheadToken(2).is(tok::equal)) {
+        SourceLocation StartLoc = ConsumeToken();        
+        const IdentifierInfo* II = Tok.getIdentifierInfo();
+        SourceLocation NameLoc = ConsumeToken();
+        ConsumeToken();
+        ArgLabel = ArgumentLabel(II, StartLoc, NameLoc);
+      } else if (Tok.is(tok::identifier) && GetLookAheadToken(1).is(tok::colon)) {
+        const IdentifierInfo* II = Tok.getIdentifierInfo(); 
+        SourceLocation StartLoc = ConsumeToken();
+        ConsumeToken();
+        ArgLabel = ArgumentLabel(II, StartLoc, /*NameLoc=*/StartLoc);
+      }
+    }
+
     if (ExpressionStarts)
       ExpressionStarts();
 
@@ -3383,6 +3403,8 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
       SkipUntil(tok::comma, tok::r_paren, StopBeforeMatch);
       SawError = true;
     } else {
+      if (ArgLabels)
+        ArgLabels->push_back(ArgLabel);
       Exprs.push_back(Expr.get());
     }
 
