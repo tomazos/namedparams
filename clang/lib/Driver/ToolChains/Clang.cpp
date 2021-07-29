@@ -6040,6 +6040,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcoroutines-ts");
   }
 
+  if (Args.hasFlag(options::OPT_fnamedparams,
+                   options::OPT_fno_namedparams, false) && types::isCXX(InputType)) {
+    CmdArgs.push_back("-fnamedparams");
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_fdouble_square_bracket_attributes,
                   options::OPT_fno_double_square_bracket_attributes);
 
