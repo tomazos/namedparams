@@ -6016,6 +6016,16 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       // the l_paren token.
     }
 
+    // This parses the label-allowed or label-required indicator (-fnamedparams)
+    if (Tok.isOneOf(tok::period, tok::colon)) {
+      if (Tok.is(tok::period)) {
+        D.setFunctionParameterLabelKind(FunctionParameterLabelKind::LabelAllowed);
+      } else /*tok::colon*/{
+        D.setFunctionParameterLabelKind(FunctionParameterLabelKind::LabelRequired);
+      }
+      ConsumeToken();
+    }
+
     if (Tok.isOneOf(tok::identifier, tok::kw_operator, tok::annot_template_id,
                     tok::tilde)) {
       // We found something that indicates the start of an unqualified-id.
