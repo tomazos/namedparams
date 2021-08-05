@@ -1596,6 +1596,9 @@ protected:
     unsigned FastTypeQuals : Qualifiers::FastWidth;
     /// Whether this function has extended Qualifiers.
     unsigned HasExtQuals : 1;
+    /// [-fnamedparams]
+    /// Whether this function has labelled parameter information.
+    unsigned HasParameterLabelInfos : 1;
 
     /// The number of parameters this function has, not counting '...'.
     /// According to [implimits] 8 bits should be enough here but this is
@@ -3550,6 +3553,46 @@ class FunctionType : public Type {
   QualType ResultType;
 
 public:
+  /// [-fnamedparams]
+  enum class ParameterLabelKind {
+    Positional,
+    LabelAllowed,
+    LabelRequired
+  };
+
+  class ParameterLabelInfo {
+  private:
+    ParameterLabelKind Kind = ParameterLabelKind::Positional;
+    const IdentifierInfo* Label = nullptr;
+  public:
+    ParameterLabelInfo() = default;
+    ParameterLabelKind getKind() const { return Kind; }
+    const IdentifierInfo* getLabel() const { return Label; }
+
+    static ParameterLabelInfo createPositional() {
+      return ParameterLabelInfo();
+    }
+    static ParameterLabelInfo createLabelAllowed(const IdentifierInfo* Label) {
+      ParameterLabelInfo PLI;
+      PLI.Kind = ParameterLabelKind::LabelAllowed;
+      PLI.Label = Label;
+      return PLI;
+    }
+    static ParameterLabelInfo createLabelRequired(const IdentifierInfo* Label) {
+      ParameterLabelInfo PLI;
+      PLI.Kind = ParameterLabelKind::LabelRequired;
+      PLI.Label = Label;
+      return PLI;
+    }
+
+    bool operator==(const ParameterLabelInfo& that) const;
+
+    bool operator!=(const ParameterLabelInfo& that) const {
+      return !(*this == that);
+    }
+  };
+
+
   /// Interesting information about a specific parameter that can't simply
   /// be reflected in parameter's type. This is only used by FunctionProtoType
   /// but is in FunctionType to make this class available during the
@@ -3888,7 +3931,7 @@ class FunctionProtoType final
     : public FunctionType,
       public llvm::FoldingSetNode,
       private llvm::TrailingObjects<
-          FunctionProtoType, QualType, SourceLocation,
+          FunctionProtoType, QualType, FunctionType::ParameterLabelInfo, SourceLocation,
           FunctionType::FunctionTypeExtraBitfields, FunctionType::ExceptionType,
           Expr *, FunctionDecl *, FunctionType::ExtParameterInfo, Qualifiers> {
   friend class ASTContext; // ASTContext creates these.
@@ -3900,6 +3943,9 @@ class FunctionProtoType final
   // * An array of getNumParams() QualType holding the parameter types.
   //   Always present. Note that for the vast majority of FunctionProtoType,
   //   these will be the only trailing objects.
+  //
+  // * [-fnamedparams] Optionally an array of getNumParams() ParameterLabelInfo
+  //   that holds the kind and name of a parameters
   //
   // * Optionally if the function is variadic, the SourceLocation of the
   //   ellipsis.
@@ -3994,6 +4040,11 @@ private:
     return getNumParams();
   }
 
+
+  unsigned numTrailingObjects(OverloadToken<ParameterLabelInfo>) const {
+    return hasParameterLabelInfos() ? getNumParams() : 0;
+  }
+
   unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
     return isVariadic();
   }
@@ -4029,7 +4080,7 @@ private:
     return false;
   }
 
-  FunctionProtoType(QualType result, ArrayRef<QualType> params,
+  FunctionProtoType(QualType result, ArrayRef<QualType> params, ArrayRef<ParameterLabelInfo> labels,
                     QualType canonical, const ExtProtoInfo &epi);
 
   /// This struct is returned by getExceptionSpecSize and is used to
@@ -4276,6 +4327,25 @@ public:
     return exception_begin() + getNumExceptions();
   }
 
+  bool hasParameterLabelInfos() const {
+    return FunctionTypeBits.HasParameterLabelInfos;
+  }
+
+  ArrayRef<ParameterLabelInfo> getParameterLabelInfos() const {
+    if (hasParameterLabelInfos())
+      return ArrayRef<ParameterLabelInfo>(getTrailingObjects<ParameterLabelInfo>(),
+                                      getNumParams());
+    else
+      return ArrayRef<ParameterLabelInfo>();
+  }
+
+  ParameterLabelInfo getParameterLabelInfo(unsigned I) const {
+    assert(I < getNumParams() && "parameter index out of range");
+    if (hasParameterLabelInfos())
+      return getTrailingObjects<ParameterLabelInfo>()[I];
+    return ParameterLabelInfo::createPositional();
+  }
+
   /// Is there any interesting extra information for any of the parameters
   /// of this function type?
   bool hasExtParameterInfos() const {
@@ -4330,7 +4400,7 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Result,
-                      param_type_iterator ArgTys, unsigned NumArgs,
+                      param_type_iterator ArgTys, const ParameterLabelInfo* labels, unsigned NumArgs,
                       const ExtProtoInfo &EPI, const ASTContext &Context,
                       bool Canonical);
 };

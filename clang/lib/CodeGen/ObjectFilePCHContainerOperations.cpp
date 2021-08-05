@@ -105,7 +105,7 @@ class PCHContainerGenerator : public ASTConsumer {
       for (auto i : D->parameters())
         ArgTypes.push_back(i->getType());
       QualType RetTy = D->getReturnType();
-      QualType FnTy = Ctx.getFunctionType(RetTy, ArgTypes,
+      QualType FnTy = Ctx.getFunctionType(RetTy, ArgTypes, None,
                                           FunctionProtoType::ExtProtoInfo());
       if (CanRepresent(FnTy.getTypePtr()))
         DI.EmitFunctionDecl(D, D->getLocation(), FnTy);
@@ -124,7 +124,7 @@ class PCHContainerGenerator : public ASTConsumer {
       for (auto i : D->parameters())
         ArgTypes.push_back(i->getType());
       QualType RetTy = D->getReturnType();
-      QualType FnTy = Ctx.getFunctionType(RetTy, ArgTypes,
+      QualType FnTy = Ctx.getFunctionType(RetTy, ArgTypes, None,
                                           FunctionProtoType::ExtProtoInfo());
       if (CanRepresent(FnTy.getTypePtr()))
         DI.EmitFunctionDecl(D, D->getLocation(), FnTy);

@@ -6284,7 +6284,7 @@ static QualType GeneralizeFunctionType(ASTContext &Ctx, QualType Ty) {
 
     return Ctx.getFunctionType(
         GeneralizeType(Ctx, FnType->getReturnType()),
-        GeneralizedParams, FnType->getExtProtoInfo());
+        GeneralizedParams, FnType->getParameterLabelInfos(), FnType->getExtProtoInfo());
   }
 
   if (auto *FnType = Ty->getAs<FunctionNoProtoType>())

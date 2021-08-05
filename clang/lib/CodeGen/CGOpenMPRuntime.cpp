@@ -3389,7 +3389,7 @@ void CGOpenMPRuntime::emitKmpRoutineEntryT(QualType KmpInt32Ty) {
     QualType KmpRoutineEntryTyArgs[] = {KmpInt32Ty, C.VoidPtrTy};
     FunctionProtoType::ExtProtoInfo EPI;
     KmpRoutineEntryPtrQTy = C.getPointerType(
-        C.getFunctionType(KmpInt32Ty, KmpRoutineEntryTyArgs, EPI));
+        C.getFunctionType(KmpInt32Ty, KmpRoutineEntryTyArgs, /*Labels=*/None, EPI));
     KmpRoutineEntryPtrTy = CGM.getTypes().ConvertType(KmpRoutineEntryPtrQTy);
   }
 }

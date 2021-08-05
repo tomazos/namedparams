@@ -355,7 +355,7 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
        Old->getBuiltinID()) &&
       Old->isExternC()) {
     New->setType(Context.getFunctionType(
-        NewProto->getReturnType(), NewProto->getParamTypes(),
+        NewProto->getReturnType(), NewProto->getParamTypes(), NewProto->getParameterLabelInfos(),
         NewProto->getExtProtoInfo().withExceptionSpec(EST_DynamicNone)));
     return false;
   }
@@ -383,7 +383,7 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
     // Update the type of the function with the appropriate exception
     // specification.
     New->setType(Context.getFunctionType(
-        NewProto->getReturnType(), NewProto->getParamTypes(),
+        NewProto->getReturnType(), NewProto->getParamTypes(), NewProto->getParameterLabelInfos(),
         NewProto->getExtProtoInfo().withExceptionSpec(ESI)));
   }
 

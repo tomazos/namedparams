@@ -2771,7 +2771,7 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
       EPI.Variadic = Proto->isVariadic();
 
       ExpectedFunctionType
-        = Context.getFunctionType(Context.VoidTy, ArgTypes, EPI);
+        = Context.getFunctionType(Context.VoidTy, ArgTypes, None, EPI);
     }
 
     for (LookupResult::iterator D = FoundDelete.begin(),
@@ -3058,7 +3058,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
   }
 
   auto CreateAllocationFunctionDecl = [&](Attr *ExtraAttr) {
-    QualType FnType = Context.getFunctionType(Return, Params, EPI);
+    QualType FnType = Context.getFunctionType(Return, Params, None, EPI);
     FunctionDecl *Alloc = FunctionDecl::Create(
         Context, GlobalCtx, SourceLocation(), SourceLocation(), Name, FnType,
         /*TInfo=*/nullptr, SC_None, getCurFPFeatures().isFPConstrained(), false,
@@ -6821,9 +6821,9 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
                                 ExceptionTypeStorage);
 
         Composite1 = Context.getFunctionType(FPT1->getReturnType(),
-                                             FPT1->getParamTypes(), EPI1);
+                                             FPT1->getParamTypes(), FPT1->getParameterLabelInfos(), EPI1);
         Composite2 = Context.getFunctionType(FPT2->getReturnType(),
-                                             FPT2->getParamTypes(), EPI2);
+                                             FPT2->getParamTypes(), FPT2->getParameterLabelInfos(), EPI2);
       }
     }
   }

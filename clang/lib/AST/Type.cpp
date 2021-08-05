@@ -1075,7 +1075,7 @@ public:
         !paramChanged && !exceptionChanged)
       return QualType(T, 0);
 
-    return Ctx.getFunctionType(returnType, paramTypes, info);
+    return Ctx.getFunctionType(returnType, paramTypes, T->getParameterLabelInfos(), info);
   }
 
   QualType VisitParenType(const ParenType *T) {
@@ -1372,7 +1372,7 @@ struct SubstObjCTypeArgsVisitor
         !paramChanged && !exceptionChanged)
       return BaseType::VisitFunctionType(funcType);
 
-    return Ctx.getFunctionType(returnType, paramTypes, info);
+    return Ctx.getFunctionType(returnType, paramTypes, funcProtoType->getParameterLabelInfos(), info);
   }
 
   QualType VisitObjCObjectType(const ObjCObjectType *objcObjectType) {
@@ -3127,6 +3127,15 @@ QualType QualType::getNonLValueExprType(const ASTContext &Context) const {
   return *this;
 }
 
+bool FunctionType::ParameterLabelInfo::operator==(const ParameterLabelInfo& that) const {
+  if (this->getKind() != that.getKind())
+    return false;
+  else if (getKind() == ParameterLabelKind::Positional)
+    return true;
+  else
+    return this->Label->getName() == that.Label->getName();
+}
+
 StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   switch (CC) {
   case CC_C: return "cdecl";
@@ -3153,7 +3162,7 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   llvm_unreachable("Invalid calling convention.");
 }
 
-FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
+FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params, ArrayRef<ParameterLabelInfo> labels,
                                      QualType canonical,
                                      const ExtProtoInfo &epi)
     : FunctionType(FunctionProto, result, canonical, result->getDependence(),
@@ -3166,6 +3175,15 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   FunctionTypeBits.HasExtParameterInfos = !!epi.ExtParameterInfos;
   FunctionTypeBits.Variadic = epi.Variadic;
   FunctionTypeBits.HasTrailingReturn = epi.HasTrailingReturn;
+  FunctionTypeBits.HasParameterLabelInfos = !labels.empty();
+  assert((!hasParameterLabelInfos() || getNumParams() == labels.size()) && "bad labels size");
+
+  // Fill in parameter labels.
+  if (hasParameterLabelInfos()) {
+    auto *Labels = getTrailingObjects<ParameterLabelInfo>();
+    for (unsigned i = 0; i != getNumParams(); ++i)
+      Labels[i] = labels[i];
+  }
 
   // Fill in the extra trailing bitfields if present.
   if (hasExtraBitfields(epi.ExceptionSpec.Type)) {
@@ -3324,7 +3342,7 @@ bool FunctionProtoType::isTemplateVariadic() const {
 }
 
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
-                                const QualType *ArgTys, unsigned NumParams,
+                                const QualType *ArgTys, const ParameterLabelInfo* labels, unsigned NumParams,
                                 const ExtProtoInfo &epi,
                                 const ASTContext &Context, bool Canonical) {
   // We have to be careful not to get ambiguous profile encodings.
@@ -3347,6 +3365,16 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   ID.AddPointer(Result.getAsOpaquePtr());
   for (unsigned i = 0; i != NumParams; ++i)
     ID.AddPointer(ArgTys[i].getAsOpaquePtr());
+
+  // [-fnamedparams]
+  if (labels)
+    for (unsigned i = 0; i != NumParams; ++i) {
+      const ParameterLabelInfo& label = labels[i];
+      ID.AddInteger(unsigned(labels[i].getKind()));
+      if (label.getKind() != FunctionType::ParameterLabelKind::Positional)
+        ID.AddString(label.getLabel()->getName());
+    }
+
   // This method is relatively performance sensitive, so as a performance
   // shortcut, use one AddInteger call instead of four for the next four
   // fields.
@@ -3377,7 +3405,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
 
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Ctx) {
-  Profile(ID, getReturnType(), param_type_begin(), getNumParams(),
+  Profile(ID, getReturnType(), param_type_begin(), hasParameterLabelInfos() ? getTrailingObjects<ParameterLabelInfo>() : nullptr, getNumParams(),
           getExtProtoInfo(), Ctx, isCanonicalUnqualified());
 }
 

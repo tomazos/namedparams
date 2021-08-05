@@ -4259,7 +4259,7 @@ QualType Sema::adjustCCAndNoReturn(QualType ArgFunctionType,
     return ArgFunctionType;
 
   return Context.getFunctionType(ArgFunctionTypeP->getReturnType(),
-                                 ArgFunctionTypeP->getParamTypes(), EPI);
+                                 ArgFunctionTypeP->getParamTypes(), ArgFunctionTypeP->getParameterLabelInfos(), EPI);
 }
 
 /// Deduce template arguments when taking the address of a function

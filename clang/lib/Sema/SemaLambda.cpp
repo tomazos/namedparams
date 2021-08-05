@@ -374,7 +374,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
     QualType Result = FPT->getReturnType();
     if (Result->isUndeducedType()) {
       Result = SubstAutoType(Result, Context.DependentTy);
-      MethodType = Context.getFunctionType(Result, FPT->getParamTypes(),
+      MethodType = Context.getFunctionType(Result, FPT->getParamTypes(), FPT->getParameterLabelInfos(),
                                            FPT->getExtProtoInfo());
     }
   }
@@ -940,7 +940,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
         getLangOpts().CPlusPlus14 ? Context.getAutoDeductType()
                                   : Context.DependentTy;
     QualType MethodTy =
-        Context.getFunctionType(DefaultTypeForNoTrailingReturn, None, EPI);
+        Context.getFunctionType(DefaultTypeForNoTrailingReturn, /*Args=*/None, /*Labels=*/None, EPI);
     MethodTyInfo = Context.getTrivialTypeSourceInfo(MethodTy);
     ExplicitParams = false;
     ExplicitResultType = false;
@@ -1346,7 +1346,7 @@ QualType Sema::getLambdaConversionFunctionResultType(
   assert(InvokerExtInfo.RefQualifier == RQ_None &&
          "Lambda's call operator should not have a reference qualifier");
   return Context.getFunctionType(CallOpProto->getReturnType(),
-                                 CallOpProto->getParamTypes(), InvokerExtInfo);
+                                 CallOpProto->getParamTypes(), CallOpProto->getParameterLabelInfos(), InvokerExtInfo);
 }
 
 /// Add a lambda's conversion to function pointer, as described in
@@ -1375,7 +1375,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   ConvExtInfo.TypeQuals.addConst();
   ConvExtInfo.ExceptionSpec.Type = EST_BasicNoexcept;
   QualType ConvTy =
-      S.Context.getFunctionType(PtrToFunctionTy, None, ConvExtInfo);
+      S.Context.getFunctionType(PtrToFunctionTy, None, None, ConvExtInfo);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName ConversionName
@@ -1547,7 +1547,7 @@ static void addBlockPointerConversion(Sema &S,
           /*IsVariadic=*/false, /*IsCXXMethod=*/true));
   ConversionEPI.TypeQuals = Qualifiers();
   ConversionEPI.TypeQuals.addConst();
-  QualType ConvTy = S.Context.getFunctionType(BlockPtrTy, None, ConversionEPI);
+  QualType ConvTy = S.Context.getFunctionType(BlockPtrTy, None, None, ConversionEPI);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName Name

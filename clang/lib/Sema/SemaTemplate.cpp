@@ -8990,7 +8990,7 @@ bool Sema::CheckFunctionTemplateSpecialization(
           FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
           EPI.TypeQuals.addConst();
           FT = Context.getFunctionType(FPT->getReturnType(),
-                                       FPT->getParamTypes(), EPI);
+                                       FPT->getParamTypes(), FPT->getParameterLabelInfos(), EPI);
         }
       }
 

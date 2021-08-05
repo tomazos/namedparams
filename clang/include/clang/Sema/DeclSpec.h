@@ -1166,6 +1166,14 @@ public:
 /// A set of tokens that has been cached for later parsing.
 typedef SmallVector<Token, 4> CachedTokens;
 
+// Describes the kind of label that a function parameter has.
+enum class FunctionParameterLabelKind {
+  NotParameter,
+  Positional,
+  LabelAllowed,
+  LabelRequired,
+};
+
 /// One instance of this struct is used for each type in a
 /// declarator that is parsed.
 ///
@@ -1250,6 +1258,7 @@ struct DeclaratorChunk {
   /// it), but may have null identifier info: e.g. for 'void foo(int X, int)'.
   struct ParamInfo {
     IdentifierInfo *Ident;
+    FunctionParameterLabelKind LabelKind;
     SourceLocation IdentLoc;
     Decl *Param;
 
@@ -1261,10 +1270,10 @@ struct DeclaratorChunk {
     std::unique_ptr<CachedTokens> DefaultArgTokens;
 
     ParamInfo() = default;
-    ParamInfo(IdentifierInfo *ident, SourceLocation iloc,
+    ParamInfo(IdentifierInfo *ident, FunctionParameterLabelKind labelkind, SourceLocation iloc,
               Decl *param,
               std::unique_ptr<CachedTokens> DefArgTokens = nullptr)
-      : Ident(ident), IdentLoc(iloc), Param(param),
+      : Ident(ident), LabelKind(labelkind), IdentLoc(iloc), Param(param),
         DefaultArgTokens(std::move(DefArgTokens)) {}
   };
 
@@ -1756,15 +1765,6 @@ enum class FunctionDefinitionKind {
   Definition,
   Defaulted,
   Deleted
-};
-
-// Describes the kind of label that a function parameter
-// declarator has.
-enum class FunctionParameterLabelKind {
-  NotParameter,
-  Positional,
-  LabelAllowed,
-  LabelRequired,
 };
 
 enum class DeclaratorContext {

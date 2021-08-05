@@ -2491,7 +2491,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         getRestrictTy(ConstPthread_mutexattr_tPtrTy);
 
     QualType PthreadStartRoutineTy = getPointerTy(
-        ACtx.getFunctionType(/*ResultTy=*/VoidPtrTy, /*Args=*/VoidPtrTy,
+        ACtx.getFunctionType(/*ResultTy=*/VoidPtrTy, /*Args=*/VoidPtrTy, /*Labels=*/None,
                              FunctionProtoType::ExtProtoInfo()));
 
     // int pthread_cond_signal(pthread_cond_t *cond);

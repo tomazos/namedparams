@@ -648,7 +648,7 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
       FunctionProtoType::ExceptionSpecInfo(EST_BasicNoexcept));
   SmallVector<QualType, 4> ArgsQTys(
       4, Op.Ty->castAs<ComplexType>()->getElementType());
-  QualType FQTy = CGF.getContext().getFunctionType(Op.Ty, ArgsQTys, EPI);
+  QualType FQTy = CGF.getContext().getFunctionType(Op.Ty, ArgsQTys, /*Labels=*/None, EPI);
   const CGFunctionInfo &FuncInfo = CGF.CGM.getTypes().arrangeFreeFunctionCall(
       Args, cast<FunctionType>(FQTy.getTypePtr()), false);
 

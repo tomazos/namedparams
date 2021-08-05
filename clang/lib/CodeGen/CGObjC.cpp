@@ -3693,7 +3693,7 @@ CodeGenFunction::GenerateObjCAtomicSetterCopyHelperFunction(
   SmallVector<QualType, 2> ArgTys;
   ArgTys.push_back(DestTy);
   ArgTys.push_back(SrcTy);
-  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
+  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, None, {});
 
   FunctionDecl *FD = FunctionDecl::Create(
       C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
@@ -3783,7 +3783,7 @@ CodeGenFunction::GenerateObjCAtomicGetterCopyHelperFunction(
   SmallVector<QualType, 2> ArgTys;
   ArgTys.push_back(DestTy);
   ArgTys.push_back(SrcTy);
-  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
+  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, /*Labels=*/None, {});
 
   FunctionDecl *FD = FunctionDecl::Create(
       C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,

@@ -1298,7 +1298,7 @@ ASTNodeImporter::VisitFunctionProtoType(const FunctionProtoType *T) {
     return std::move(Err);
 
   return Importer.getToContext().getFunctionType(
-      *ToReturnTypeOrErr, ArgTypes, ToEPI);
+      *ToReturnTypeOrErr, ArgTypes, T->getParameterLabelInfos(), ToEPI);
 }
 
 ExpectedType ASTNodeImporter::VisitUnresolvedUsingType(
@@ -3429,7 +3429,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
       UsedDifferentProtoType = true;
     }
     FromTy = Importer.getFromContext().getFunctionType(
-        FromReturnTy, FromFPT->getParamTypes(), FromEPI);
+        FromReturnTy, FromFPT->getParamTypes(), FromFPT->getParameterLabelInfos(), FromEPI);
   }
 
   Error Err = Error::success();

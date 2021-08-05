@@ -99,7 +99,7 @@ static QualType Desugar(ASTContext &Context, QualType QT, bool &ShouldAKA) {
 
       if (DesugarReturn || DesugarArgument) {
         ShouldAKA = true;
-        QT = FPT ? Context.getFunctionType(RT, Args, FPT->getExtProtoInfo())
+        QT = FPT ? Context.getFunctionType(RT, Args, FPT->getParameterLabelInfos(), FPT->getExtProtoInfo())
                  : Context.getFunctionNoProtoType(RT, FT->getExtInfo());
         break;
       }

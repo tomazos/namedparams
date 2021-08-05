@@ -2889,7 +2889,8 @@ QualType Sema::BuildFunctionType(QualType T,
   if (Invalid)
     return QualType();
 
-  return Context.getFunctionType(T, ParamTypes, EPI);
+  // TODO: -fnamedparams
+  return Context.getFunctionType(T, ParamTypes, None, EPI);
 }
 
 /// Build a member pointer type \c T Class::*.
@@ -5248,6 +5249,24 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         SmallVector<QualType, 16> ParamTys;
         ParamTys.reserve(FTI.NumParams);
 
+        SmallVector<FunctionProtoType::ParameterLabelInfo, 16> ParamLabels;
+
+        if (S.getLangOpts().NamedParams) {
+          ParamLabels.reserve(FTI.NumParams);
+          for (unsigned i = 0, e = FTI.NumParams; i != e; ++i) {
+            FunctionParameterLabelKind LabelKind = FTI.Params[i].LabelKind;
+            const IdentifierInfo* II = FTI.Params[i].Ident;
+            assert(LabelKind != FunctionParameterLabelKind::NotParameter &&
+                   "NotParameter should not be here when -fnamedparams");
+            if (LabelKind == FunctionParameterLabelKind::LabelAllowed)
+              ParamLabels.push_back(FunctionProtoType::ParameterLabelInfo::createLabelAllowed(II));
+            else if (LabelKind == FunctionParameterLabelKind::LabelRequired)
+              ParamLabels.push_back(FunctionProtoType::ParameterLabelInfo::createLabelRequired(II));
+            else /*LabelKind == FunctionParameterLabelKind::Positional*/
+              ParamLabels.push_back(FunctionProtoType::ParameterLabelInfo::createPositional());
+          }
+        }
+
         SmallVector<FunctionProtoType::ExtParameterInfo, 16>
           ExtParameterInfos(FTI.NumParams);
         bool HasAnyInterestingExtParameterInfos = false;
@@ -5405,7 +5424,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                                         : ASIdx);
           EPI.TypeQuals.addAddressSpace(AS);
         }
-        T = Context.getFunctionType(T, ParamTys, EPI);
+        T = Context.getFunctionType(T, ParamTys, ParamLabels, EPI);
       }
       break;
     }
@@ -5616,7 +5635,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       EPI.RefQualifier = RQ_None;
 
       T = Context.getFunctionType(FnTy->getReturnType(), FnTy->getParamTypes(),
-                                  EPI);
+                                  FnTy->getParameterLabelInfos(), EPI);
       // Rebuild any parens around the identifier in the function type.
       for (unsigned i = 0, e = D.getNumTypeObjects(); i != e; ++i) {
         if (D.getTypeObject(i).Kind != DeclaratorChunk::Paren)

@@ -4662,7 +4662,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
       // matches.
       if (isUnresolvedExceptionSpec(FPT->getExceptionSpecType())) {
         FD->setType(Reader.getContext().getFunctionType(
-            FPT->getReturnType(), FPT->getParamTypes(),
+            FPT->getReturnType(), FPT->getParamTypes(), FPT->getParameterLabelInfos(),
             FPT->getExtProtoInfo().withExceptionSpec(ESI)));
 
         // When we get to the end of deserializing, see if there are other decls

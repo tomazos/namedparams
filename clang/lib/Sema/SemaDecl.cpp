@@ -3762,7 +3762,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       assert(!OldProto->hasExceptionSpec() && "Exception spec in C");
       SmallVector<QualType, 16> ParamTypes(OldProto->param_types());
       NewQType =
-          Context.getFunctionType(NewFuncType->getReturnType(), ParamTypes,
+          Context.getFunctionType(NewFuncType->getReturnType(), ParamTypes, OldProto->getParameterLabelInfos(),
                                   OldProto->getExtProtoInfo());
       New->setType(NewQType);
       New->setHasInheritedPrototype();
@@ -3846,7 +3846,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       }
 
       if (MergeTypeWithOld)
-        New->setType(Context.getFunctionType(MergedReturn, ArgTypes,
+        New->setType(Context.getFunctionType(MergedReturn, ArgTypes, OldProto->getParameterLabelInfos(),
                                              OldProto->getExtProtoInfo()));
       return MergeCompatibleFunctionDecls(New, Old, S, MergeTypeWithOld);
     }
@@ -9241,7 +9241,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
           NewFD->getType()->castAs<FunctionProtoType>();
       QualType Result =
           SubstAutoType(FPT->getReturnType(), Context.DependentTy);
-      NewFD->setType(Context.getFunctionType(Result, FPT->getParamTypes(),
+      NewFD->setType(Context.getFunctionType(Result, FPT->getParamTypes(), FPT->getParameterLabelInfos(),
                                              FPT->getExtProtoInfo()));
     }
 
@@ -9388,7 +9388,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
          Name.getCXXOverloadedOperator() == OO_Array_Delete) &&
         getLangOpts().CPlusPlus11 && FPT && !FPT->hasExceptionSpec())
       NewFD->setType(Context.getFunctionType(
-          FPT->getReturnType(), FPT->getParamTypes(),
+          FPT->getReturnType(), FPT->getParamTypes(), FPT->getParameterLabelInfos(),
           FPT->getExtProtoInfo().withExceptionSpec(EST_BasicNoexcept)));
   }
 
@@ -9895,7 +9895,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     EPI.Variadic = true;
     EPI.ExtInfo = FT->getExtInfo();
 
-    QualType R = Context.getFunctionType(FT->getReturnType(), None, EPI);
+    QualType R = Context.getFunctionType(FT->getReturnType(), None, None, EPI);
     NewFD->setType(R);
   }
 
@@ -10900,7 +10900,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       EPI.TypeQuals.addConst();
       MD->setType(Context.getFunctionType(FPT->getReturnType(),
-                                          FPT->getParamTypes(), EPI));
+                                          FPT->getParamTypes(), FPT->getParameterLabelInfos(), EPI));
 
       // Warn that we did this, if we're not performing template instantiation.
       // In that case, we'll have warned already when the template was defined.
@@ -14531,7 +14531,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
         // Update the return type to the deduced type.
         const auto *Proto = FD->getType()->castAs<FunctionProtoType>();
-        FD->setType(Context.getFunctionType(RetType, Proto->getParamTypes(),
+        FD->setType(Context.getFunctionType(RetType, Proto->getParamTypes(), Proto->getParameterLabelInfos(),
                                             Proto->getExtProtoInfo()));
       }
     }

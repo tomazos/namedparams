@@ -3058,7 +3058,7 @@ const FunctionType *ASTContext::adjustFunctionType(const FunctionType *T,
     const auto *FPT = cast<FunctionProtoType>(T);
     FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
     EPI.ExtInfo = Info;
-    Result = getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), EPI);
+    Result = getFunctionType(FPT->getReturnType(), FPT->getParamTypes(), FPT->getParameterLabelInfos(), EPI);
   }
 
   return cast<FunctionType>(Result.getTypePtr());
@@ -3070,7 +3070,7 @@ void ASTContext::adjustDeducedFunctionResultType(FunctionDecl *FD,
   while (true) {
     const auto *FPT = FD->getType()->castAs<FunctionProtoType>();
     FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-    FD->setType(getFunctionType(ResultType, FPT->getParamTypes(), EPI));
+    FD->setType(getFunctionType(ResultType, FPT->getParamTypes(), FPT->getParameterLabelInfos(), EPI));
     if (FunctionDecl *Next = FD->getPreviousDecl())
       FD = Next;
     else
@@ -3108,7 +3108,7 @@ QualType ASTContext::getFunctionTypeWithExceptionSpec(
   // specification.
   const auto *Proto = Orig->castAs<FunctionProtoType>();
   return getFunctionType(
-      Proto->getReturnType(), Proto->getParamTypes(),
+      Proto->getReturnType(), Proto->getParamTypes(), Proto->getParameterLabelInfos(),
       Proto->getExtProtoInfo().withExceptionSpec(ESI));
 }
 
@@ -3126,7 +3126,7 @@ QualType ASTContext::getFunctionTypeWithoutPtrSizes(QualType T) {
     SmallVector<QualType, 16> Args(Proto->param_types());
     for (unsigned i = 0, n = Args.size(); i != n; ++i)
       Args[i] = removePtrSizeAddrSpace(Args[i]);
-    return getFunctionType(RetTy, Args, Proto->getExtProtoInfo());
+    return getFunctionType(RetTy, Args, Proto->getParameterLabelInfos(), Proto->getExtProtoInfo());
   }
 
   if (const FunctionNoProtoType *Proto = T->getAs<FunctionNoProtoType>()) {
@@ -4258,14 +4258,14 @@ static bool isCanonicalExceptionSpecification(
 }
 
 QualType ASTContext::getFunctionTypeInternal(
-    QualType ResultTy, ArrayRef<QualType> ArgArray,
+    QualType ResultTy, ArrayRef<QualType> ArgArray, ArrayRef<FunctionType::ParameterLabelInfo> Labels,
     const FunctionProtoType::ExtProtoInfo &EPI, bool OnlyWantCanonical) const {
   size_t NumArgs = ArgArray.size();
 
   // Unique functions, to guarantee there is only one function of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
-  FunctionProtoType::Profile(ID, ResultTy, ArgArray.begin(), NumArgs, EPI,
+  FunctionProtoType::Profile(ID, ResultTy, ArgArray.begin(), Labels.empty() ? nullptr : Labels.begin(), NumArgs, EPI,
                              *this, true);
 
   QualType Canonical;
@@ -4367,7 +4367,7 @@ QualType ASTContext::getFunctionTypeInternal(
     // Adjust the canonical function result type.
     CanQualType CanResultTy = getCanonicalFunctionResultType(ResultTy);
     Canonical =
-        getFunctionTypeInternal(CanResultTy, CanonicalArgs, CanonicalEPI, true);
+        getFunctionTypeInternal(CanResultTy, CanonicalArgs, Labels, CanonicalEPI, true);
 
     // Get the new insert position for the node we care about.
     FunctionProtoType *NewIP =
@@ -4380,10 +4380,10 @@ QualType ASTContext::getFunctionTypeInternal(
   auto ESH = FunctionProtoType::getExceptionSpecSize(
       EPI.ExceptionSpec.Type, EPI.ExceptionSpec.Exceptions.size());
   size_t Size = FunctionProtoType::totalSizeToAlloc<
-      QualType, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
+      QualType, FunctionType::ParameterLabelInfo, SourceLocation, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::ExceptionType, Expr *, FunctionDecl *,
       FunctionProtoType::ExtParameterInfo, Qualifiers>(
-      NumArgs, EPI.Variadic,
+      NumArgs, Labels.size(), EPI.Variadic,
       FunctionProtoType::hasExtraBitfields(EPI.ExceptionSpec.Type),
       ESH.NumExceptionType, ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
       EPI.ExtParameterInfos ? NumArgs : 0,
@@ -4391,7 +4391,7 @@ QualType ASTContext::getFunctionTypeInternal(
 
   auto *FTP = (FunctionProtoType *)Allocate(Size, TypeAlignment);
   FunctionProtoType::ExtProtoInfo newEPI = EPI;
-  new (FTP) FunctionProtoType(ResultTy, ArgArray, Canonical, newEPI);
+  new (FTP) FunctionProtoType(ResultTy, ArgArray, Labels, Canonical, newEPI);
   Types.push_back(FTP);
   if (!Unique)
     FunctionProtoTypes.InsertNode(FTP, InsertPos);
@@ -9563,6 +9563,12 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     if (lproto->getMethodQuals() != rproto->getMethodQuals())
       return {};
 
+    if (getLangOpts().NamedParams) {
+      for (unsigned i = 0; i < lproto->getNumParams(); i++)
+        if (lproto->getParameterLabelInfo(i) != rproto->getParameterLabelInfo(i))
+          return {};
+    }
+
     SmallVector<FunctionProtoType::ExtParameterInfo, 4> newParamInfos;
     bool canUseLeft, canUseRight;
     if (!mergeExtParameterInfo(lproto, rproto, canUseLeft, canUseRight,
@@ -9606,7 +9612,7 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
     EPI.ExtInfo = einfo;
     EPI.ExtParameterInfos =
         newParamInfos.empty() ? nullptr : newParamInfos.data();
-    return getFunctionType(retType, types, EPI);
+    return getFunctionType(retType, types, lproto->getParameterLabelInfos(), EPI);
   }
 
   if (lproto) allRTypes = false;
@@ -9643,7 +9649,7 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
 
     FunctionProtoType::ExtProtoInfo EPI = proto->getExtProtoInfo();
     EPI.ExtInfo = einfo;
-    return getFunctionType(retType, proto->getParamTypes(), EPI);
+    return getFunctionType(retType, proto->getParamTypes(), proto->getParameterLabelInfos(), EPI);
   }
 
   if (allLTypes) return lhs;
@@ -10095,7 +10101,7 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
         FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
         EPI.ExtInfo = getFunctionExtInfo(LHS);
         QualType ResultType =
-            getFunctionType(OldReturnType, FPT->getParamTypes(), EPI);
+            getFunctionType(OldReturnType, FPT->getParamTypes(), FPT->getParameterLabelInfos(), EPI);
         return ResultType;
       }
     }
@@ -10717,7 +10723,7 @@ QualType ASTContext::GetBuiltinType(unsigned Id,
     EPI.ExceptionSpec.Type =
         getLangOpts().CPlusPlus11 ? EST_BasicNoexcept : EST_DynamicNone;
 
-  return getFunctionType(ResType, ArgTypes, EPI);
+  return getFunctionType(ResType, ArgTypes, /*Labels=*/{}, EPI);
 }
 
 static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,

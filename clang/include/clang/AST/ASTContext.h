@@ -1485,16 +1485,16 @@ public:
   }
 
   /// Return a normal function type with a typed argument list.
-  QualType getFunctionType(QualType ResultTy, ArrayRef<QualType> Args,
+  QualType getFunctionType(QualType ResultTy, ArrayRef<QualType> Args, ArrayRef<FunctionType::ParameterLabelInfo> Labels,
                            const FunctionProtoType::ExtProtoInfo &EPI) const {
-    return getFunctionTypeInternal(ResultTy, Args, EPI, false);
+    return getFunctionTypeInternal(ResultTy, Args, Labels, EPI, false);
   }
 
   QualType adjustStringLiteralBaseType(QualType StrLTy) const;
 
 private:
   /// Return a normal function type with a typed argument list.
-  QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
+  QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args, ArrayRef<FunctionType::ParameterLabelInfo> Labels,
                                    const FunctionProtoType::ExtProtoInfo &EPI,
                                    bool OnlyWantCanonical) const;
 

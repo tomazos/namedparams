@@ -3630,8 +3630,9 @@ llvm::DISubprogram *CGDebugInfo::getFunctionFwdDeclOrStub(GlobalDecl GD,
     ArgTypes.push_back(Parm->getType());
 
   CallingConv CC = FD->getType()->castAs<FunctionType>()->getCallConv();
+
   QualType FnType = CGM.getContext().getFunctionType(
-      FD->getReturnType(), ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
+      FD->getReturnType(), ArgTypes, None, FunctionProtoType::ExtProtoInfo(CC));
   if (!FD->isExternallyVisible())
     SPFlags |= llvm::DISubprogram::SPFlagLocalToUnit;
   if (CGM.getLangOpts().Optimize)

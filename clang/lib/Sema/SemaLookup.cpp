@@ -783,7 +783,7 @@ static void GetOpenCLBuiltinFctOverloads(
     }
 
     FunctionList.push_back(Context.getFunctionType(
-        RetTypes[(RetTypes.size() != 1) ? IGenType : 0], ArgList, PI));
+        RetTypes[(RetTypes.size() != 1) ? IGenType : 0], ArgList, /*Labels=*/None, PI));
   }
 }
 
@@ -1170,7 +1170,7 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
     EPI.ExceptionSpec = EST_None;
     QualType ExpectedType
       = R.getSema().Context.getFunctionType(R.getLookupName().getCXXNameType(),
-                                            None, EPI);
+                                            /*Args=*/None, /*Labels=*/None, EPI);
 
     // Perform template argument deduction against the type that we would
     // expect the function to have.

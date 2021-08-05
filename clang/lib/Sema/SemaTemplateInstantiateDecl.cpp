@@ -1925,7 +1925,7 @@ static QualType adjustFunctionTypeForInstantiation(ASTContext &Context,
   FunctionProtoType::ExtProtoInfo NewEPI = NewFunc->getExtProtoInfo();
   NewEPI.ExtInfo = OrigFunc->getExtInfo();
   return Context.getFunctionType(NewFunc->getReturnType(),
-                                 NewFunc->getParamTypes(), NewEPI);
+                                 NewFunc->getParamTypes(), NewFunc->getParameterLabelInfos(), NewEPI);
 }
 
 /// Normal class members are of more specific types and therefore
@@ -3875,7 +3875,7 @@ void TemplateDeclInstantiator::adjustForRewrite(RewriteKind RK,
   //   the return type is replaced with bool
   auto *FPT = T->castAs<FunctionProtoType>();
   T = SemaRef.Context.getFunctionType(
-      SemaRef.Context.BoolTy, FPT->getParamTypes(), FPT->getExtProtoInfo());
+      SemaRef.Context.BoolTy, FPT->getParamTypes(), FPT->getParameterLabelInfos(), FPT->getExtProtoInfo());
 
   // Update the return type in the source info too. The most straightforward
   // way is to create new TypeSourceInfo for the new type. Use the location of
@@ -4670,7 +4670,7 @@ TemplateDeclInstantiator::InitFunctionInstantiation(FunctionDecl *New,
       EPI.ExceptionSpec.SourceDecl = New;
       EPI.ExceptionSpec.SourceTemplate = ExceptionSpecTemplate;
       New->setType(SemaRef.Context.getFunctionType(
-          NewProto->getReturnType(), NewProto->getParamTypes(), EPI));
+          NewProto->getReturnType(), NewProto->getParamTypes(), NewProto->getParameterLabelInfos(), EPI));
     } else {
       Sema::ContextRAII SwitchContext(SemaRef, New);
       SemaRef.SubstExceptionSpec(New, Proto, TemplateArgs);

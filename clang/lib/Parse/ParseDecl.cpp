@@ -6780,8 +6780,10 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
     if (!ParamsSoFar.insert(ParmII).second) {
       Diag(Tok, diag::err_param_redefinition) << ParmII;
     } else {
+      FunctionParameterLabelKind LabelKind = getLangOpts().NamedParams ? FunctionParameterLabelKind::Positional : FunctionParameterLabelKind::NotParameter;
       // Remember this identifier in ParamInfo.
       ParamInfo.push_back(DeclaratorChunk::ParamInfo(ParmII,
+                                                     LabelKind,
                                                      Tok.getLocation(),
                                                      nullptr));
     }
@@ -7006,6 +7008,7 @@ void Parser::ParseParameterDeclarationClause(
       }
 
       ParamInfo.push_back(DeclaratorChunk::ParamInfo(ParmII,
+                                          ParmDeclarator.getFunctionParameterLabelKind(),
                                           ParmDeclarator.getIdentifierLoc(),
                                           Param, std::move(DefArgToks)));
     }

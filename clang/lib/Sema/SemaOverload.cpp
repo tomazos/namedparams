@@ -1598,7 +1598,7 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
       ExtInfo.ExtParameterInfos =
           NewParamInfos.empty() ? nullptr : NewParamInfos.data();
       QualType QT = Context.getFunctionType(FromFPT->getReturnType(),
-                                            FromFPT->getParamTypes(), ExtInfo);
+                                            FromFPT->getParamTypes(), FromFPT->getParameterLabelInfos(), ExtInfo);
       FromFn = QT->getAs<FunctionType>();
       Changed = true;
     }

@@ -985,7 +985,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     for (const VarDecl *VD : Args)
       ArgTypes.push_back(VD->getType());
     QualType FnType = getContext().getFunctionType(
-        RetTy, ArgTypes, FunctionProtoType::ExtProtoInfo(CC));
+        RetTy, ArgTypes, None, FunctionProtoType::ExtProtoInfo(CC));
     DI->emitFunctionStart(GD, Loc, StartLoc, FnType, CurFn, CurFuncIsThunk);
   }
 

@@ -7472,7 +7472,7 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       EPI.ExceptionSpec.SourceDecl = MD;
       MD->setType(Context.getFunctionType(ReturnType,
                                           llvm::makeArrayRef(&ArgType,
-                                                             ExpectedParams),
+                                                             ExpectedParams), None,
                                           EPI));
     }
   }
@@ -8444,7 +8444,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
       EPI.TypeQuals.addConst();
       MD->setType(Context.getFunctionType(FPT->getReturnType(),
-                                          FPT->getParamTypes(), EPI));
+                                          FPT->getParamTypes(), FPT->getParameterLabelInfos(), EPI));
     }
   } else {
     // A non-member function declared in a class must be a friend.
@@ -8572,7 +8572,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
     EPI.ExceptionSpec.Type = EST_Unevaluated;
     EPI.ExceptionSpec.SourceDecl = FD;
     FD->setType(Context.getFunctionType(FPT->getReturnType(),
-                                        FPT->getParamTypes(), EPI));
+                                        FPT->getParamTypes(), FPT->getParameterLabelInfos(), EPI));
   }
 
   return false;
@@ -10313,7 +10313,7 @@ QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
   EPI.TypeQuals = Qualifiers();
   EPI.RefQualifier = RQ_None;
 
-  return Context.getFunctionType(Context.VoidTy, Proto->getParamTypes(), EPI);
+  return Context.getFunctionType(Context.VoidTy, Proto->getParamTypes(), Proto->getParameterLabelInfos(), EPI);
 }
 
 /// CheckConstructor - Checks a fully-formed constructor for
@@ -10506,7 +10506,7 @@ QualType Sema::CheckDestructorDeclarator(Declarator &D, QualType R,
   EPI.Variadic = false;
   EPI.TypeQuals = Qualifiers();
   EPI.RefQualifier = RQ_None;
-  return Context.getFunctionType(Context.VoidTy, None, EPI);
+  return Context.getFunctionType(Context.VoidTy, None, None, EPI);
 }
 
 static void extendLeft(SourceRange &R, SourceRange Before) {
@@ -10682,7 +10682,7 @@ void Sema::CheckConversionDeclarator(Declarator &D, QualType &R,
   // of the errors above fired) and with the conversion type as the
   // return type.
   if (D.isInvalidType())
-    R = Context.getFunctionType(ConvType, None, Proto->getExtProtoInfo());
+    R = Context.getFunctionType(ConvType, None, None, Proto->getExtProtoInfo());
 
   // C++0x explicit conversion operators.
   if (DS.hasExplicitSpecifier() && !getLangOpts().CPlusPlus20)
@@ -13192,7 +13192,7 @@ void Sema::setupImplicitSpecialMemberType(CXXMethodDecl *SpecialMem,
     EPI.TypeQuals.addAddressSpace(AS);
   }
 
-  auto QT = Context.getFunctionType(ResultTy, Args, EPI);
+  auto QT = Context.getFunctionType(ResultTy, Args, /*Labels=*/None, EPI);
   SpecialMem->setType(QT);
 
   // During template instantiation of implicit special member functions we need
@@ -13372,7 +13372,7 @@ Sema::findInheritingConstructor(SourceLocation Loc,
   EPI.ExceptionSpec.Type = EST_Unevaluated;
   EPI.ExceptionSpec.SourceDecl = DerivedCtor;
   DerivedCtor->setType(Context.getFunctionType(FPT->getReturnType(),
-                                               FPT->getParamTypes(), EPI));
+                                               FPT->getParamTypes(), FPT->getParameterLabelInfos(), EPI));
 
   // Build the parameter declarations.
   SmallVector<ParmVarDecl *, 16> ParamDecls;
@@ -13685,7 +13685,7 @@ void Sema::AdjustDestructorExceptionSpec(CXXDestructorDecl *Destructor) {
   FunctionProtoType::ExtProtoInfo EPI = DtorType->getExtProtoInfo();
   EPI.ExceptionSpec.Type = EST_Unevaluated;
   EPI.ExceptionSpec.SourceDecl = Destructor;
-  Destructor->setType(Context.getFunctionType(Context.VoidTy, None, EPI));
+  Destructor->setType(Context.getFunctionType(Context.VoidTy, None, None, EPI));
 
   // FIXME: If the destructor has a body that could throw, and the newly created
   // spec doesn't allow exceptions, we should emit a warning, because this

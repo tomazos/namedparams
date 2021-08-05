@@ -391,7 +391,7 @@ static bool SemaBuiltinCallWithStaticChain(Sema &S, CallExpr *BuiltinCall) {
   QualType ReturnTy = CE->getCallReturnType(S.Context);
   QualType ArgTys[2] = { ReturnTy, ChainResult.get()->getType() };
   QualType BuiltinTy = S.Context.getFunctionType(
-      ReturnTy, ArgTys, FunctionProtoType::ExtProtoInfo());
+      ReturnTy, ArgTys, /*Labels=*/None, FunctionProtoType::ExtProtoInfo());
   QualType BuiltinPtrTy = S.Context.getPointerType(BuiltinTy);
 
   Builtin =
